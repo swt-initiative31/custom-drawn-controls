@@ -114,7 +114,6 @@ public class TableItem extends Item {
 
 		initialize();
 		this._addListener(style, null);
-
 	}
 
 	private void initialize() {
@@ -171,11 +170,12 @@ public class TableItem extends Item {
 			return;
 		}
 
-		doPaint(event.gc);
+		final int i = parent.indexOf(this);
+		doPaint(event.gc, i);
 	}
 
-	void doPaint(GC gc) {
-		renderer.doPaint(gc);
+	void doPaint(GC gc, int index) {
+		renderer.doPaint(gc, index);
 	}
 
 	private boolean isVisible() {
@@ -789,7 +789,6 @@ public class TableItem extends Item {
 		}
 
 		return renderer.getImageBounds(index);
-
 	}
 
 	/**

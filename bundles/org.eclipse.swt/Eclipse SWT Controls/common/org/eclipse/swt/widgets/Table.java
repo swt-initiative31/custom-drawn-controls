@@ -117,8 +117,7 @@ public class Table extends CustomComposite {
 
 	private final List<TableItem> itemsList = new ArrayList<>();
 	private final TreeMap<Integer, TableItem> virtualItemsList = new TreeMap<>();
-	TreeSet<TableItem> selectedTableItems = new TreeSet<>(
-			(o1, o2) -> Integer.compare(indexOf(o1), indexOf(o2)));
+	private final ListLikeModel selectionModel;
 	// TODO implement focusHandling
 	private TableItem focusItem;
 	Item mouseHoverElement;
@@ -218,6 +217,8 @@ public class Table extends CustomComposite {
 	 */
 	public Table(Composite parent, int style) {
 		super(parent, checkStyle(style));
+
+		selectionModel = new ListLikeModel((style & SWT.SINGLE) != 0);
 
 		renderer = new DefaultTableRenderer(this);
 
@@ -430,14 +431,9 @@ public class Table extends CustomComposite {
 				Rectangle b = it.getBounds();
 				if (b.contains(p)) {
 					if ((style & SWT.MULTI) == 0 || (e.stateMask & SWT.MOD1) == 0) {
-						selectedTableItems.clear();
-						selectedTableItems.add(it);
+						selectionModel.setSelection(i);
 					} else {
-						if (selectedTableItems.contains(it)) {
-							selectedTableItems.remove(it);
-						} else {
-							selectedTableItems.add(it);
-						}
+						selectionModel.toggleSelection(i);
 					}
 				} else {
 					if (it.isInCheckArea(p)) {
@@ -893,6 +889,8 @@ public class Table extends CustomComposite {
 				itemsList.add(item);
 			}
 
+			selectionModel.setCount(itemsList.size());
+
 			if (index < topIndex) {
 				for (int i = 0; i < index; i++) {
 					itemsList.get(i).clearCache();
@@ -947,13 +945,9 @@ public class Table extends CustomComposite {
 		if (indices == null) error(SWT.ERROR_NULL_ARGUMENT);
 		if (indices.length == 0) return;
 
-		Set<TableItem> s = new HashSet<>();
-		for (int i : indices) {
-			if (i >= 0 && i < itemsList.size()) {
-				s.add(itemsList.get(i));
-			}
+		if (selectionModel.deselect(indices)) {
+			redraw();
 		}
-		selectedTableItems.removeAll(s);
 	}
 
 	/**
@@ -1029,7 +1023,7 @@ public class Table extends CustomComposite {
 	public void deselectAll() {
 		checkWidget();
 
-		selectedTableItems.clear();
+		selectionModel.clearSelection();
 		redraw();
 	}
 
@@ -1505,7 +1499,13 @@ public class Table extends CustomComposite {
 	 */
 	public TableItem[] getSelection() {
 		checkWidget();
-		return selectedTableItems.toArray(new TableItem[0]);
+		final int[] selectionIndices = selectionModel.getSelectionIndices();
+		final TableItem[] tableItems = new TableItem[selectionIndices.length];
+		for (int i = 0; i < selectionIndices.length; i++) {
+			final int index = selectionIndices[i];
+			tableItems[i] = _getItem(index);
+		}
+		return tableItems;
 	}
 
 	/**
@@ -1523,7 +1523,7 @@ public class Table extends CustomComposite {
 	 */
 	public int getSelectionCount() {
 		checkWidget();
-		return selectedTableItems.size();
+		return selectionModel.selectionCount();
 	}
 
 	/**
@@ -1543,8 +1543,7 @@ public class Table extends CustomComposite {
 	public int getSelectionIndex() {
 		checkWidget();
 
-		if (selectedTableItems.isEmpty()) return -1;
-		return indexOf(selectedTableItems.first());
+		return selectionModel.getSelectionIndex();
 	}
 
 	/**
@@ -1582,7 +1581,7 @@ public class Table extends CustomComposite {
 	 */
 	public int[] getSelectionIndices() {
 		checkWidget();
-		return indicesOf(selectedTableItems.toArray(new TableItem[0]));
+		return selectionModel.getSelectionIndices();
 	}
 
 	/**
@@ -1769,12 +1768,7 @@ public class Table extends CustomComposite {
 	 *                         </ul>
 	 */
 	public boolean isSelected(int index) {
-		for (TableItem it : selectedTableItems) {
-			if (indexOf(it) == index) {
-				return true;
-			}
-		}
-		return false;
+		return selectionModel.isSelected(index);
 	}
 
 	/**
@@ -1968,29 +1962,11 @@ public class Table extends CustomComposite {
 	 */
 	public void select(int[] indices) {
 		checkWidget();
-
 		if (indices == null) error(SWT.ERROR_NULL_ARGUMENT);
 
-		if ((style & SWT.SINGLE) != 0) {
-			if (indices.length > 1) return;
-			selectedTableItems.clear();
+		if (selectionModel.select(indices)) {
+			redraw();
 		}
-
-		for (int index : indices) {
-			if (index < 0 || index >= getItemCount()) {
-				continue;
-			}
-
-			TableItem it = getItem(index);
-			if (it != null) {
-				selectedTableItems.add(it);
-
-				if ((style & SWT.SINGLE) != 0) {
-					break;
-				}
-			}
-		}
-
 	}
 
 	boolean hasItems() {
@@ -2048,17 +2024,11 @@ public class Table extends CustomComposite {
 	 */
 	public void select(int index) {
 		checkWidget();
-
 		if (index < 0 || index >= getItemCount()) return;
 
-		if ((style & SWT.SINGLE) != 0) {
-			selectedTableItems.clear();
+		if (selectionModel.select(new int[] {index})) {
+			redraw();
 		}
-
-		TableItem selected = getItem(index);
-		if (selectedTableItems.contains(selected)) return;
-
-		selectedTableItems.add(getItem(index));
 	}
 
 	/**
@@ -2109,13 +2079,9 @@ public class Table extends CustomComposite {
 			indices[i - start] = i;
 		}
 
-		if ((style & SWT.SINGLE) != 0) {
-			selectedTableItems.clear();
-			selectedTableItems.add(itemsList.get(indices[0]));
-			return;
+		if (selectionModel.select(indices)) {
+			redraw();
 		}
-
-		select(indices);
 	}
 
 	/**
@@ -2369,6 +2335,10 @@ public class Table extends CustomComposite {
 
 		count = Math.max(0, count);
 		if (isVirtual()) {
+			if (count == virtualItemCount) {
+				return;
+			}
+
 			boolean redraw = count > virtualItemCount;
 			this.virtualItemCount = count;
 
@@ -2380,6 +2350,8 @@ public class Table extends CustomComposite {
 					break;
 				}
 			}
+
+			selectionModel.setCount(count);
 
 			if (redraw) {
 				redraw();
@@ -2926,14 +2898,13 @@ public class Table extends CustomComposite {
 	public void showSelection() {
 		checkWidget();
 
-		if (selectedTableItems.isEmpty()) return;
 		// TODO: check whether it is always the first selected element, which should be
 		// visible.
 
-		TableItem first = selectedTableItems.first();
-
-		int index = indexOf(first);
-		showItem(index);
+		final int index = selectionModel.getSelectionIndex();
+		if (index >= 0) {
+			showItem(index);
+		}
 	}
 
 	/* public */ void sort() {

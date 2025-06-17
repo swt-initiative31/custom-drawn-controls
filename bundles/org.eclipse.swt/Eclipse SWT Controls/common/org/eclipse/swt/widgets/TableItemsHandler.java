@@ -81,7 +81,7 @@ class TableItemsHandler {
 				table.checkData(item, i, false);
 			}
 
-			item.doPaint(gc);
+			item.doPaint(gc, i);
 
 			final Rectangle bounds = item.getFullBounds();
 			if (bounds.y + bounds.height > itemsArea.y + itemsArea.height) {
