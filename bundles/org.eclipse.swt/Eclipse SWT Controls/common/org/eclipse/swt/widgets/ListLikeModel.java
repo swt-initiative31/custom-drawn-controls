@@ -9,6 +9,7 @@ final class ListLikeModel {
 	private final Set<Integer> selection = new TreeSet<>();
 	private final boolean singleSelection;
 
+	private int topIndex;
 	private int current;
 	private int count;
 
@@ -108,6 +109,22 @@ final class ListLikeModel {
 		}
 
 		return selection.contains(index);
+	}
+
+	public void remove(int index) {
+		if (index < current) {
+			current--;
+		}
+		count--;
+	}
+
+	public int getTopIndex() {
+		return topIndex;
+	}
+
+	public void setTopIndex(int topIndex) {
+		checkIndex(topIndex);
+		this.topIndex = topIndex;
 	}
 
 	private boolean isOutOfBounds(int index) {
