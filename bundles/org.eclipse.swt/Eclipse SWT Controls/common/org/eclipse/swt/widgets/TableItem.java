@@ -21,7 +21,6 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.DPIUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -175,8 +174,8 @@ public class TableItem extends Item {
 		releaseHandle();
 	}
 
-	void doPaint(GC gc, int index, boolean paintItemEvent) {
-		renderer.doPaint(gc, index, paintItemEvent);
+	void doPaint(GC gc, int index) {
+		renderer.doPaint(gc, index);
 	}
 
 	static Table checkNull(Table control) {
@@ -628,17 +627,19 @@ public class TableItem extends Item {
 	 */
 	public Rectangle getImageBounds(int index) {
 		checkWidget();
-		return DPIUtil.scaleDown(getImageBoundsInPixels(index), 100);
-	}
-
-	Rectangle getImageBoundsInPixels(int index) {
 		if (!parent.checkData(this, true)) error(SWT.ERROR_WIDGET_DISPOSED);
 		int itemIndex = getItemIndex();
 		if (itemIndex == -1) {
 			return new Rectangle(0, 0, 0, 0);
 		}
 
-		return renderer.getImageBounds(index);
+		final GC gc = new GC(parent);
+		try {
+			return renderer.getImageBounds(index, gc);
+		}
+		finally {
+			gc.dispose();
+		}
 	}
 
 	/**
@@ -743,17 +744,19 @@ public class TableItem extends Item {
 	 */
 	public Rectangle getTextBounds(int index) {
 		checkWidget();
-		return DPIUtil.scaleDown(getTextBoundsInPixels(index), 100);
-	}
-
-	Rectangle getTextBoundsInPixels(int index) {
 		if (!parent.checkData(this, true)) error(SWT.ERROR_WIDGET_DISPOSED);
 		int itemIndex = getItemIndex();
 		if (itemIndex == -1) {
 			return new Rectangle(0, 0, 0, 0);
 		}
 
-		return renderer.getTextBounds(index);
+		final GC gc = new GC(parent);
+		try {
+			return renderer.getTextBounds(index, gc);
+		}
+		finally {
+			gc.dispose();
+		}
 	}
 
 	void redraw() {
@@ -1425,7 +1428,7 @@ public class TableItem extends Item {
 		redraw();
 	}
 
-	public Point computeCellSize(int colIndex) {
-		return renderer.computeCellSize(colIndex);
+	Point computeCellSize(int colIndex, GC gc) {
+		return renderer.computeCellSize(colIndex, gc);
 	}
 }
