@@ -21,6 +21,7 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.internal.DPIZoomChangeRegistry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +47,10 @@ import java.util.List;
  * @noextend This class is not intended to be subclassed by clients.
  */
 public class TableItem extends Item {
+
+	static {
+		DPIZoomChangeRegistry.registerHandler(TableItem::handleDPIChange, TableItem.class);
+	}
 
 	private Table table;
 	private String[] strings;
@@ -1307,5 +1312,23 @@ public class TableItem extends Item {
 	void toggleCheck() {
 		this.checked = !this.checked;
 		redraw();
+	}
+
+	private static void handleDPIChange(Widget widget, int newZoom, float scalingFactor) {
+		if (!(widget instanceof TableItem tableItem)) {
+			return;
+		}
+
+		if (tableItem.font != null) {
+			tableItem.setFont(tableItem.font);
+		}
+
+		Font[] cellFonts = tableItem.cellFont;
+		if (cellFonts != null) {
+			for (int index = 0; index < cellFonts.length; index++) {
+				Font cellFont = cellFonts[index];
+				cellFonts[index] = cellFont == null ? null : Font.win32_new(cellFont, tableItem.getNativeZoom());
+			}
+		}
 	}
 }

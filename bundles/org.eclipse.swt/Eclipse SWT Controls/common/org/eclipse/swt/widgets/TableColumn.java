@@ -16,6 +16,7 @@ package org.eclipse.swt.widgets;
 import org.eclipse.swt.*;
 import org.eclipse.swt.events.*;
 import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.internal.DPIZoomChangeRegistry;
 
 /**
  * Instances of this class represent a column in a table widget.
@@ -39,6 +40,10 @@ import org.eclipse.swt.graphics.*;
  * @noextend This class is not intended to be subclassed by clients.
  */
 public class TableColumn extends Item {
+
+	static {
+		DPIZoomChangeRegistry.registerHandler(TableColumn::handleDPIChange, TableColumn.class);
+	}
 
 	private Table table;
 	// TODO implement moveable
@@ -638,5 +643,18 @@ public class TableColumn extends Item {
 
 	void setX(int x) {
 		this.x = x;
+	}
+
+	private static void handleDPIChange(Widget widget, int newZoom, float scalingFactor) {
+		if (!(widget instanceof TableColumn tableColumn)) {
+			return;
+		}
+
+//		final int newColumnWidth = Math.round(tableColumn.getWidthInPixels() * scalingFactor);
+//		tableColumn.setWidthInPixels(newColumnWidth);
+		Image image = tableColumn.getImage();
+		if (image != null) {
+			tableColumn.setImage(image);
+		}
 	}
 }
