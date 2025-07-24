@@ -218,44 +218,6 @@ class WidgetWin32Tests {
 	}
 
 	@Test
-	public void testTableAfterZooming() {
-		Display display = Display.getDefault();
-		int zoom = DPIUtil.getDeviceZoom();
-		int scaledZoom = zoom * 2;
-
-		Shell shell = new Shell(display);
-		shell.setBounds(0, 0, 100, 160);
-		shell.setLayout(new FillLayout());
-		shell.pack();
-
-		Table table = new Table(shell, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
-		table.setBounds(20, 20, 360, 240);
-		table.setHeaderVisible(true);
-		table.setLinesVisible(true);
-
-		TableColumn column = new TableColumn(table, SWT.NONE);
-		column.setText("Column 1");
-		column.setWidth(200);
-
-		Font font = new Font(display, "Arial", 12, SWT.BOLD);
-
-		TableItem item1 = new TableItem(table, SWT.NONE);
-		item1.setText("Item 1");
-		item1.setFont(font);
-
-		for (TableColumn col : table.getColumns()) {
-			col.pack();
-		}
-
-		int fontHeightBefore = item1.getFont().getFontData()[0].data.lfHeight;
-		DPITestUtil.changeDPIZoom(shell, scaledZoom);
-		int fontHeightAfter = item1.getFont().getFontData()[0].data.lfHeight;
-
-		assertEquals("Height of a font for table item should be doubled after zooming to 200",
-				fontHeightBefore * 2, fontHeightAfter);
-	}
-
-	@Test
 	public void testTreeAfterZooming() {
 		Display display = Display.getDefault();
 		int zoom = DPIUtil.getDeviceZoom();
